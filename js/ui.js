@@ -1,5 +1,6 @@
 import { state } from './state.js';
-import { loadUsers, escapeHtml, login, logout, hashPass } from './storage.js';
+import { escapeHtml } from './storage.js';
+import { login, signup, logout, getLeaderboard } from './storage.js';
 
 const els = {
   score: document.getElementById('score'),
@@ -19,6 +20,7 @@ const els = {
   authInfo: document.getElementById('authInfo'),
   tabLogin: document.getElementById('tabLogin'),
   tabSignup: document.getElementById('tabSignup'),
+  authEmail: document.getElementById('authEmail'),
   authUser: document.getElementById('authUser'),
   authPass: document.getElementById('authPass'),
   authMsg: document.getElementById('authMsg'),
@@ -57,7 +59,11 @@ export function showGameOver(isNew) {
   els.over.classList.remove('hidden');
 }
 
-export function openModal(m) { m.classList.remove('hidden'); state.modalOpen = true; }
+export function openModal(m) {
+  m.classList.remove('hidden');
+  state.modalOpen = true;
+}
+
 export function closeModals() {
   els.authModal.classList.add('hidden');
   els.lbModal.classList.add('hidden');
@@ -72,73 +78,97 @@ function setAuthMode(m) {
   msg('');
 }
 
-function msg(t, ok) { els.authMsg.textContent = t; els.authMsg.className = ok ? 'ok' : ''; }
+function msg(t, ok) {
+  els.authMsg.textContent = t;
+  els.authMsg.className = ok ? 'ok' : '';
+}
 
 export function refreshAuthModal() {
   if (state.currentUser) {
     els.authForms.classList.add('hidden');
     els.authInfo.classList.remove('hidden');
-    const u = loadUsers()[state.currentUser] || {};
     els.authInfo.innerHTML =
       `<p style="font-size:15px;margin-bottom:6px">Playing as <b>${escapeHtml(state.currentUser)}</b></p>
-       <p style="font-size:12px;color:rgba(255,255,255,.55)">Best: ${u.best || 0} · Games: ${u.plays || 0}</p>
+       <p style="font-size:12px;color:rgba(255,255,255,.55)">Personal Best: ${state.best}</p>
        <button class="btn-main" id="logoutBtn" style="margin-top:18px">LOG OUT</button>`;
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-      logout();
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      try {
+        await logout();
+      } catch (e) {
+        console.warn('Logout error:', e);
+      }
       updateHUD();
       refreshAuthModal();
     });
   } else {
     els.authForms.classList.remove('hidden');
     els.authInfo.classList.add('hidden');
-    els.authUser.value = ''; els.authPass.value = ''; msg('');
+    els.authEmail.value = '';
+    els.authUser.value = '';
+    els.authPass.value = '';
+    msg('');
   }
 }
 
 export async function handleAuth() {
-  const name = els.authUser.value.trim();
+  const email = els.authEmail.value.trim();
+  const username = els.authUser.value.trim();
   const pass = els.authPass.value;
-  if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) return msg('Username: 3–16 letters, numbers or _');
-  if (pass.length < 4) return msg('Password must be at least 4 chars');
-  const users = loadUsers();
-  if (authMode === 'signup') {
-    if (users[name]) return msg('That username is taken');
-    const salt = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-    users[name] = { salt, hash: await hashPass(pass, salt), best: 0, plays: 0 };
-    import('./storage.js').then(m => m.saveUsers(users));
-    login(name);
-    msg('Account created! 🎉', true);
-    setTimeout(closeModals, 700);
-  } else {
-    const u = users[name];
-    if (!u) return msg('No account with that name');
-    if ((await hashPass(pass, u.salt)) !== u.hash) return msg('Wrong password');
-    login(name);
-    closeModals();
+
+  // Validation
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msg('Valid email required');
+  if (!/^[A-Za-z0-9_]{3,16}$/.test(username)) return msg('Username: 3–16 letters, numbers or _');
+  if (pass.length < 6) return msg('Password must be at least 6 characters');
+
+  els.authSubmit.disabled = true;
+  els.authSubmit.textContent = '...';
+
+  try {
+    if (authMode === 'signup') {
+      await signup(email, pass, username);
+      msg('Account created! 🎉', true);
+      setTimeout(closeModals, 700);
+    } else {
+      await login(email, pass);
+      msg('Welcome back!', true);
+      setTimeout(closeModals, 400);
+    }
+    updateHUD();
+  } catch (e) {
+    // Supabase errors have a .message property
+    const errMsg = e?.message || 'Authentication failed';
+    // Friendly error mapping
+    if (errMsg.includes('Invalid login credentials')) msg('Wrong email or password');
+    else if (errMsg.includes('already registered')) msg('Email already in use');
+    else if (errMsg.includes('email_not_confirmed')) msg('Check your email to confirm account');
+    else msg(errMsg);
+  } finally {
+    els.authSubmit.disabled = false;
+    els.authSubmit.textContent = authMode === 'login' ? 'LOG IN' : 'CREATE ACCOUNT';
   }
-  updateHUD();
 }
 
-export function renderLeaderboard() {
-  const users = loadUsers();
-  const rows = Object.entries(users)
-    .map(([n, u]) => ({ n, best: u.best || 0 }))
-    .filter(r => r.best > 0)
-    .sort((a, b) => b.best - a.best)
-    .slice(0, 10);
-  if (!rows.length) {
-    els.lbList.innerHTML = '<p class="empty">No scores yet.<br>Create an account!</p>';
-    return;
+export async function renderLeaderboard() {
+  els.lbList.innerHTML = '<p class="empty">Loading...</p>';
+  try {
+    const rows = await getLeaderboard();
+    if (!rows || !rows.length) {
+      els.lbList.innerHTML = '<p class="empty">No scores yet.<br>Create an account and set one!</p>';
+      return;
+    }
+    els.lbList.innerHTML = rows.map((r, i) => {
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+      const me = r.username === state.currentUser ? ' me' : '';
+      return `<div class="lb-row${me}">
+        <span class="lb-rank">${medal}</span>
+        <span class="lb-name">${escapeHtml(r.username)}</span>
+        <span class="lb-score">${r.score}</span>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    console.error('Leaderboard fetch failed:', e);
+    els.lbList.innerHTML = '<p class="empty">Failed to load leaderboard.<br>Check connection and try again.</p>';
   }
-  els.lbList.innerHTML = rows.map((r, i) => {
-    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
-    const me = r.n === state.currentUser ? ' me' : '';
-    return `<div class="lb-row${me}">
-      <span class="lb-rank">${medal}</span>
-      <span class="lb-name">${escapeHtml(r.n)}</span>
-      <span class="lb-score">${r.best}</span>
-    </div>`;
-  }).join('');
 }
 
 export function initUI(onTap, onMuteToggle) {
@@ -151,25 +181,33 @@ export function initUI(onTap, onMuteToggle) {
   els.tabLogin.addEventListener('click', () => setAuthMode('login'));
   els.tabSignup.addEventListener('click', () => setAuthMode('signup'));
   els.authSubmit.addEventListener('click', handleAuth);
-  [els.authUser, els.authPass].forEach(inp => inp.addEventListener('keydown', e => {
-    e.stopPropagation();
-    if (e.key === 'Enter') handleAuth();
-  }));
+
+  // Enter key in auth fields
+  [els.authEmail, els.authUser, els.authPass].forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      e.stopPropagation();
+      if (e.key === 'Enter') handleAuth();
+    });
+  });
 
   // Top-left buttons
   els.playerBtn.addEventListener('click', () => { refreshAuthModal(); openModal(els.authModal); });
   els.boardBtn.addEventListener('click', () => { renderLeaderboard(); openModal(els.lbModal); });
   els.lbHint.addEventListener('pointerdown', e => e.stopPropagation());
-  els.lbHint.addEventListener('click', () => { setAuthMode('signup'); refreshAuthModal(); openModal(els.authModal); });
+  els.lbHint.addEventListener('click', () => {
+    setAuthMode('signup');
+    refreshAuthModal();
+    openModal(els.authModal);
+  });
 
-  // Mute
+  // Mute toggle
   els.muteBtn.addEventListener('pointerdown', e => e.stopPropagation());
   els.muteBtn.addEventListener('click', () => {
     const muted = onMuteToggle();
     els.muteBtn.textContent = muted ? '🔇' : '🔊';
   });
 
-  // Global input
+  // Global tap / key handler
   let lastTap = 0;
   const tapHandler = (e) => {
     if (state.modalOpen) return;
@@ -179,6 +217,7 @@ export function initUI(onTap, onMuteToggle) {
     lastTap = now;
     onTap(e);
   };
+
   window.addEventListener('pointerdown', tapHandler, { passive: true });
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { closeModals(); return; }

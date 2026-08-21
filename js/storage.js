@@ -33,10 +33,12 @@ export async function login(email, password) {
 }
 
 export async function signup(email, password, username) {
-  await sbSignUp(email, password, username);
-  state.currentUser = username;
+  const data = await sbSignUp(email, password, username);
+  state.currentUser = data.session
+    ? data.user.user_metadata?.username || username
+    : null;
   state.best = loadBest();
-  return username;
+  return state.currentUser;
 }
 
 export async function logout() {
@@ -66,6 +68,6 @@ export async function saveScoreToCloud(username, score) {
     return await submitScore(username, score);
   } catch(e) {
     console.warn('Failed to save score to cloud:', e.message);
-    return null;
+    throw e;
   }
 }

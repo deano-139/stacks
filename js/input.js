@@ -91,7 +91,7 @@ export function drop() {
       vr: Math.sign(b.dir) * 1.8, rot: 0,
     });
     state.moving = null;
-    die();
+    void die();
     return;
   }
 
@@ -161,7 +161,7 @@ export function drop() {
   state.moving = spawnMoving();
 }
 
-function die() {
+async function die() {
   state.mode = 'dead';
   state.shake = 14;
   playDeath();
@@ -175,9 +175,9 @@ function die() {
     isNew = true;
   }
 
-  // Submit to Supabase cloud leaderboard (fire-and-forget)
-  if (state.currentUser && isNew) {
-    saveScoreToCloud(state.currentUser, state.score).catch(err => {
+  // Submit authenticated scores even when the local best is already higher.
+  if (state.score > 0) {
+    await saveScoreToCloud(state.currentUser, state.score).catch(err => {
       console.warn('Cloud score submission failed:', err);
     });
   }

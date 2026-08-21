@@ -31,21 +31,38 @@ export async function submitScore(username, score) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Must be logged in to submit scores');
 
+  const normalizedUsername = String(
+    username || user.user_metadata?.username || user.email?.split('@')[0] || ''
+  ).trim();
+  const normalizedScore = Number(score);
+  if (!normalizedUsername) throw new Error('Username is required');
+  if (!Number.isInteger(normalizedScore) || normalizedScore < 1) {
+    throw new Error('Score must be a positive integer');
+  }
+
   // Check if user already has an entry
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from('leaderboard')
     .select('score')
-    .eq('username', username)
-    .single();
+    .eq('username', normalizedUsername)
+    .limit(1)
+    .maybeSingle();
+
+  if (lookupError) throw lookupError;
 
   // Only update if new score is higher
-  if (existing && existing.score >= score) return existing.score;
+  if (existing && existing.score >= normalizedScore) return existing.score;
 
-  const { data, error } = await supabase
-    .from('leaderboard')
-    .upsert({ username, score }, { onConflict: 'username' })
-    .select()
-    .single();
+  const query = existing
+    ? supabase
+      .from('leaderboard')
+      .update({ score: normalizedScore })
+      .eq('username', normalizedUsername)
+    : supabase
+      .from('leaderboard')
+      .insert({ username: normalizedUsername, score: normalizedScore });
+
+  const { data, error } = await query.select().single();
 
   if (error) throw error;
   return data.score;

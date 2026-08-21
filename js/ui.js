@@ -125,9 +125,13 @@ export async function handleAuth() {
 
   try {
     if (authMode === 'signup') {
-      await signup(email, pass, username);
-      msg('Account created! 🎉', true);
-      setTimeout(closeModals, 700);
+      const signedInUsername = await signup(email, pass, username);
+      if (signedInUsername) {
+        msg('Account created! 🎉', true);
+        setTimeout(closeModals, 700);
+      } else {
+        msg('Account created. Check your email, then log in.', true);
+      }
     } else {
       await login(email, pass);
       msg('Welcome back!', true);

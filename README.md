@@ -6,5 +6,5 @@ fun addictive stacking game made by dean kim
  - press `space`. thats it
  - have fun
 ## credits
- - made by dean kim
- - totally not from `chat.qwen.ai`
+ - made by [dean kim](https://github.com/deano-139)
+ - totally not from [qwen](https://chat.qwen.ai)

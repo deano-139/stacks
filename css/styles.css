@@ -138,6 +138,7 @@ canvas {
   transform: translateX(-50%);
   font-family: var(--font-mono);
   font-size: clamp(3rem, 10vw, 5rem);
+  line-height: 1;
   font-weight: 800;
   font-feature-settings: "tnum" 1, "zero" 1;
   letter-spacing: var(--tracking-tight);
@@ -154,7 +155,7 @@ canvas {
 
 #best {
   position: fixed;
-  top: 96px;
+  top: calc(28px + clamp(3rem, 10vw, 5rem) + 16px);
   left: 50%;
   transform: translateX(-50%);
   font-size: var(--fs-xs);

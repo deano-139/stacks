@@ -2,4 +2,5 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   base: './', // Critical for GitHub Pages / subdirectory hosting
+  outDir: 'docs', // Output directory for the build
 });

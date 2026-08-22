@@ -19,6 +19,8 @@ export const state = {
   combo: 0,
   camY: 0,
   camTarget: 0,
+  zoom: 1,
+  zoomTarget: 1,
   flash: 0,
   shake: 0,
   shakeIntensity: 0,

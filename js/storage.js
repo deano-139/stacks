@@ -5,10 +5,11 @@ import {
   signUp as sbSignUp,
   signIn as sbSignIn,
   signOut as sbSignOut,
-  getSession
+  getSession,
+  fetchPersonalBest
 } from './supabase.js';
 
-// --- LOCAL STORAGE (personal best stays local) ---
+// --- LOCAL STORAGE (cached copy of the personal best) ---
 const KEYS = { BEST: 'stacks_best' };
 
 export function loadBest() {
@@ -17,6 +18,21 @@ export function loadBest() {
 
 export function saveBest(val) {
   try { localStorage.setItem(KEYS.BEST, String(val)); } catch(e) {}
+}
+
+async function syncBest(username) {
+  const localBest = loadBest();
+  try {
+    const cloudBest = await fetchPersonalBest(username);
+    const best = Math.max(localBest, cloudBest);
+    state.best = best;
+    saveBest(best);
+
+    if (localBest > cloudBest) await saveScoreToCloud(username, localBest);
+  } catch (e) {
+    state.best = localBest;
+    console.warn('Failed to sync personal best:', e.message);
+  }
 }
 
 export function escapeHtml(s) {
@@ -28,7 +44,7 @@ export function escapeHtml(s) {
 export async function login(email, password) {
   const data = await sbSignIn(email, password);
   state.currentUser = data.user.user_metadata?.username || email.split('@')[0];
-  state.best = loadBest();
+  await syncBest(state.currentUser);
   return state.currentUser;
 }
 
@@ -37,7 +53,8 @@ export async function signup(email, password, username) {
   state.currentUser = data.session
     ? data.user.user_metadata?.username || username
     : null;
-  state.best = loadBest();
+  if (state.currentUser) await syncBest(state.currentUser);
+  else state.best = loadBest();
   return state.currentUser;
 }
 
@@ -54,6 +71,7 @@ export async function restoreSession() {
     if (session?.user) {
       state.currentUser = session.user.user_metadata?.username
         || session.user.email?.split('@')[0] || 'PLAYER';
+      await syncBest(state.currentUser);
     }
   } catch(e) { /* no session */ }
 }

@@ -1,4 +1,4 @@
-import { state, CONFIG } from './state.js';
+import { state, dims, CONFIG } from './state.js';
 import { hueFor, iso } from './renderer.js';
 import { playStack, playDeath, ensureAudio } from './audio.js';
 import { saveBest, saveScoreToCloud } from './storage.js';
@@ -12,6 +12,8 @@ export function initScene() {
   state.floaters = [];
   state.camY = 0;
   state.camTarget = 0;
+  state.zoom = 1;
+  state.zoomTarget = 1;
   state.score = 0;
   state.combo = 0;
   state.flash = 0;
@@ -268,6 +270,8 @@ export function drop() {
 
 function die() {
   state.mode = 'dead';
+  state.camTarget = Math.max(0, (state.stack.length - 1) / 2);
+  state.zoomTarget = Math.max(0.35, Math.min(1, (dims.H * 0.78) / ((state.stack.length + 2) * dims.C)));
   state.shake = 18;
   state.shakeIntensity = 1.5;
   playDeath();

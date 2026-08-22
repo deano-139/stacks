@@ -24,6 +24,20 @@ export async function fetchLeaderboard() {
 }
 
 /**
+ * Fetch one player's best score.
+ */
+export async function fetchPersonalBest(username) {
+  const { data, error } = await supabase
+    .from('leaderboard')
+    .select('score')
+    .eq('username', username)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.score || 0;
+}
+
+/**
  * Submit or update a player's best score
  * Uses upsert so each user only has one row
  */

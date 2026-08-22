@@ -29,6 +29,9 @@ function update(dt) {
   const camDiff = state.camTarget - state.camY;
   state.camY += camDiff * Math.min(1, dt * 6);
 
+  const zoomDiff = state.zoomTarget - state.zoom;
+  state.zoom += zoomDiff * Math.min(1, dt * 4);
+
   // Update stack block physics (drop and settle)
   for (let i = 0; i < state.stack.length; i++) {
     const block = state.stack[i];
@@ -105,7 +108,7 @@ function update(dt) {
 // Bootstrap
 window.addEventListener('resize', resize);
 resize();
-restoreSession();
+restoreSession().then(updateHUD);
 initScene();
 updateHUD();
 initUI(handleTap, toggleMute);

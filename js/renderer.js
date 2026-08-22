@@ -27,9 +27,10 @@ export function hsl(h, s, l) {
 }
 
 export function iso(x, y, z) {
+  const zoom = state.zoom;
   return {
-    x: dims.W / 2 + (x - z) * dims.A,
-    y: dims.H * 0.62 + (x + z) * dims.B - (y - state.camY) * dims.C,
+    x: dims.W / 2 + (x - z) * dims.A * zoom,
+    y: dims.H * 0.62 + ((x + z) * dims.B - (y - state.camY) * dims.C) * zoom,
   };
 }
 

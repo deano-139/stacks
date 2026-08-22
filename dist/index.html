@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>STACKS</title>
+  <script type="module" crossorigin src="./assets/index-C74I6rd5.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CkcxsAQZ.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<!-- HUD -->
+<div id="score" class="hud-hidden">0</div>
+<div id="best" class="hud-hidden">BEST 0</div>
+
+<div id="topLeft">
+  <div class="pill" id="playerBtn">👤 <span id="playerName">GUEST</span></div>
+  <div class="pill" id="boardBtn">🏆 TOP 10</div>
+</div>
+<div id="mute">🔊</div>
+
+<!-- Menu Overlay -->
+<div id="menu" class="overlay">
+  <h1>STACKS</h1>
+  <p>Drop the moving block on the tower.</p>
+  <p>Overhang gets sliced off — perfect combos regrow your block.</p>
+  <p style="margin-top:10px;color:rgba(255,255,255,.45)">🖱️ click &nbsp;·&nbsp; 👆 tap &nbsp;·&nbsp; ⌨️ space</p>
+  <div class="tap">TAP TO START</div>
+</div>
+
+<!-- Game Over Overlay -->
+<div id="over" class="overlay hidden">
+  <h2>TOWER FELL</h2>
+  <div id="finalScore">0</div>
+  <div id="newBest">★ NEW BEST ★</div>
+  <p id="finalBest">BEST 0</p>
+  <p id="lbHint">👤 Create a free account to join the leaderboard</p>
+  <div class="tap">TAP TO RETRY</div>
+</div>
+
+<!-- Auth Modal -->
+<div id="authModal" class="modal-wrap hidden">
+  <div class="modal-card">
+    <div class="modal-close" data-close>✕</div>
+    <div id="authForms">
+      <div class="tabs">
+        <div class="tab active" id="tabLogin">LOG IN</div>
+        <div class="tab" id="tabSignup">SIGN UP</div>
+      </div>
+        <input id="authEmail" type="email" placeholder="Email" autocomplete="email">
+        <input id="authUser" placeholder="Username (3-16 chars)" maxlength="16" autocomplete="off">
+        <input id="authPass" type="password" placeholder="Password (min 6 chars)" minlength="6">
+      <div id="authMsg"></div>
+      <button class="btn-main" id="authSubmit">LOG IN</button>
+    </div>
+    <div id="authInfo" class="hidden"></div>
+    <p class="tiny">Accounts are stored online.</p>
+  </div>
+</div>
+
+<!-- Leaderboard Modal -->
+<div id="lbModal" class="modal-wrap hidden">
+  <div class="modal-card wide">
+    <div class="modal-close" data-close>✕</div>
+    <h3>🏆 LEADERBOARD</h3>
+    <div id="lbList"></div>
+  </div>
+</div>
+
+</body>
+</html>
